@@ -1,66 +1,100 @@
 # Spec: Bangladesh Localization
 
 ## Overview
-Spendly currently displays money with a hardcoded ₹ (Indian Rupee) symbol baked
-directly into `profile.html`, and formats amounts with Western thousands-grouping
-(`"{:,.2f}"`) inside three `database/queries.py` helpers. This step swaps the
-displayed currency to ৳ (Bangladeshi Taka) and switches amount grouping to the
-Bangladeshi/South Asian lakh–crore convention (e.g. `1,00,000.00` instead of
-`100,000.00`). This is a **global default display change**, not a per-user
-preference — the app has no locale/currency/language infrastructure today (no
-`users` column for it, no settings route, no translation layer), and building
-that is explicitly out of scope for this spec. Anything beyond currency symbol
-and digit grouping (UI text translation, timezone handling, a user-facing
-language switch) is a separate, much larger feature and is not attempted here.
+Spendly's UI, demo data, and Claude Code setup files carry Indian-context
+defaults left over from the original template: a hardcoded ₹ (rupee) symbol
+across six templates and a test file, "Nitish" name/email placeholders on
+login and registration, Indian merchant/context descriptions in the seeded
+demo expenses, and Indian-context instructions baked into the `.claude/`
+command and skill files that drive future `/seed-user` and `/seed-expense`
+runs. This step replaces all of it with Bangladeshi equivalents. It is a
+**content and display swap only** — no schema change, no new route, no
+per-user preference, and (per an explicit decision) **no change to number
+formatting**: `"{:,.2f}"` Western digit grouping is kept exactly as-is. An
+earlier draft of this spec proposed switching to lakh/crore grouping; that
+decision is reversed here and superseded by this version.
 
 ## Depends on
-- Step 01 (database setup) — `expenses.amount` column this formats
-- Step 05 (backend routes for profile page) — introduces
-  `get_recent_transactions()`, `get_summary_stats()`, `get_category_breakdown()`,
-  the three functions this step modifies
-- Step 10 (CSV export) — `get_expenses_for_export()` must remain unaffected;
-  this step must not regress the raw-value contract that export depends on
+- Step 01 (database setup) — `expenses` schema and `seed_db()`, whose
+  description strings this step edits
+- Step 02 (registration), Step 03 (login) — the templates whose placeholder
+  text this step edits
+- Step 05 (backend routes for profile page) — the query functions that
+  produce the amount strings this step's currency symbol wraps (unchanged
+  logic, only the template-side symbol changes)
+- Step 06 (date filter) — `tests/test_06_date_filter_profile.py`, whose `₹`
+  assertions this step must update in place
 
 ## Routes
 No new routes.
 
 ## Database changes
-No database changes. No new column, no new table, no per-user setting.
+No schema changes. `database/db.py`'s `seed_db()` gets a **content-only**
+edit: the free-text `description` field of its 8 hardcoded demo rows is
+rewritten from Indian to Bangladeshi context. `amount`, `category`, `date`,
+and the row count are all unchanged, so every existing test that keys off
+those values keeps passing.
 
 ## Templates
 - **Create:** none
-- **Modify:** `templates/profile.html` — replace the hardcoded `₹` glyph with
-  `৳` in all three places it appears: the total stat (`stat-value`), the
-  transaction table (`tx-amount`), and the category breakdown
-  (`cat-row-amount`)
+- **Modify:**
+  - `templates/add_expense.html:22` — label `"Amount (₹)"` → `"Amount (৳)"`
+  - `templates/edit_expense.html:22` — label `"Amount (₹)"` → `"Amount (৳)"`
+  - `templates/landing.html:43` — mock stat `"₹18,240"` → `"৳18,240"`
+  - `templates/landing.html:48` — mock stat `"₹6,760"` → `"৳6,760"`
+  - `templates/landing.html:87` — feature-icon glyph `"₹"` → `"৳"`
+  - `templates/profile.html:62,103,132` — stats total, transaction amount,
+    category amount: `₹` → `৳`
+  - `templates/login.html:22` — placeholder `"nitish@example.com"` →
+    `"faizul@example.com"`
+  - `templates/register.html:22` — placeholder `"Nitish Kumar"` →
+    `"Faizul Rahman"`
+  - `templates/register.html:28` — placeholder `"nitish@example.com"` →
+    `"faizul@example.com"`
 
 ## Files to change
-- `database/queries.py`
-  - Add a private helper, e.g. `_format_bdt_amount(amount)`, that formats a
-    float to 2 decimal places using lakh–crore digit grouping (group the last
-    3 digits, then group the remainder in pairs of 2 from the right — e.g.
-    `1234567.89` → `"12,34,567.89"`, `2450.0` → `"2,450.00"` unchanged from
-    today since grouping is identical below 100,000).
-  - Replace the three separate `"{:,.2f}".format(...)` call sites in
-    `get_recent_transactions()`, `get_summary_stats()`, and
-    `get_category_breakdown()` with calls to this one shared helper, so the
-    grouping logic exists in exactly one place.
-- `templates/profile.html` — swap `₹` → `৳` in the three spots above.
-- `tests/test_06_date_filter_profile.py` — this pre-existing file asserts
-  `"₹" in body` in **four** places. These are step 06's tests, not step 11's,
-  but the currency swap invalidates them directly. Update all four to check
-  for `"৳"` instead. This is a deliberate, explicit exception to "tests come
-  from the spec, not the implementation" — call it out during `/test-feature`
-  rather than letting it appear as an unexplained diff to an unrelated spec's
-  test file.
+- `templates/add_expense.html`, `templates/edit_expense.html`,
+  `templates/landing.html`, `templates/profile.html`, `templates/login.html`,
+  `templates/register.html` — currency symbol and/or name placeholder edits,
+  exact locations above
+- `tests/test_06_date_filter_profile.py` — 8 occurrences of `₹` (4 assertions
+  at the lines currently reading `assert "₹" in body`, plus their 4 paired
+  comments) → `৳`. Pre-existing test file from step 06, not new coverage for
+  this step — call this out explicitly during `/test-feature` the same way
+  the original draft of this spec did
+- `database/db.py:95-102` — `seed_db()` description strings only:
+  - `"Groceries from D-Mart"` → a real Bangladeshi retail chain (Shwapno,
+    Meena Bazar, or Agora)
+  - `"Metro card recharge"` → a Dhaka transport context (CNG, rickshaw, bus
+    fare, or Pathao)
+  - `"Electricity bill"` → `DESCO` or `DPDC` (Dhaka's actual electricity
+    distributors)
+  - Every other row, and every `amount`/`category`/`date` value on the three
+    rows above, stays byte-for-byte unchanged
+- `.claude/commands/seed-user.md` — currently instructs the agent to
+  generate "realistic Indian names"; update to Bangladeshi names
+- `.claude/commands/seed-expense.md` — currently instructs "realistic Indian
+  descriptions" and gives amount ranges labeled with `₹`; update the context
+  to Bangladeshi and the symbol to `৳`
+- `.claude/skills/spendly-ui-designer/SKILL.md:103-104,234` — documents
+  `"Currency is the rupee (₹)"` and a checklist line `"Amounts render as
+  ₹{{ value }}"`; update both to `৳` so this skill doesn't contradict the
+  live app
+- `CLAUDE.md` — add a short, clearly-labeled currency note recording that the
+  live symbol is `৳` with `{:,.2f}` grouping kept, so this file (read as
+  ground truth by other subagents) supersedes the historical specs below
+  without editing them
+
+## Files NOT to change
+- `.claude/specs/05-09*.md` — historical records of what was true when they
+  were written. Do not edit them to reflect the new currency; the new
+  `CLAUDE.md` note is what supersedes them going forward.
 
 ## Files to create
 None.
 
 ## New dependencies
-No new dependencies. No `Flask-Babel`, no locale/ICU package — the lakh–crore
-grouping is implemented as a small pure-Python function, and the currency
-symbol is a static character, so no new pip package is needed.
+None.
 
 ## Rules for implementation
 - No SQLAlchemy or ORMs
@@ -70,35 +104,40 @@ symbol is a static character, so no new pip package is needed.
 - All templates extend `base.html`
 - DB logic goes in `database/queries.py` for anything touching `expenses`, or
   `database/db.py` for connection, schema, and `users` work — never inline in
-  a route (this feature touches `queries.py` only; no route or `db.py` change)
-- Per-resource routes must enforce ownership the way `/expenses/<id>/edit`
-  does — not applicable here, no route is added or modified
-- `_format_bdt_amount()` is a **display-only** formatter. `get_expenses_for_export()`
-  must keep returning raw, unformatted floats and ISO date strings, exactly as
-  step 10 established — do not call the new formatter from that function, and
-  do not let CSV output change in any way
-- Amounts under ৳1,00,000 must render byte-for-byte identically to today's
-  Western-grouped output (the two conventions agree below the lakh threshold)
-  — this is a regression check, not just a new-behavior check
-- `member_since`'s English month-name formatting (`queries.py`, via
-  `strftime("%B %Y")`) is explicitly **out of scope** — do not touch it
-- This is a global display default, not a per-user setting — do not add a
-  `users` column, a settings route, or any per-request locale detection
+  a route (this step touches neither route logic nor query logic — see next
+  bullet)
+- **Do not touch `database/queries.py` at all.** Number formatting
+  (`"{:,.2f}"`) is an explicit, already-made decision to keep as-is. This
+  reverses the earlier draft of this spec, which added a lakh/crore grouping
+  helper — that helper must not be introduced
+- **Do not change `demo@spendly.com` / `demo123`.** Login credentials are
+  unchanged — only the *seed row descriptions* change, not the user account
+- Edit only the exact literal strings cited above, at the cited file:line —
+  do not touch unrelated text, styling, or structure in any of these files
+- `.claude/specs/05-09*.md` are read-only for this step — do not edit them
+  even though they still describe `₹`
 
 ## Definition of done
-- [ ] `/profile` displays `৳` (not `₹`) in the total stat, every transaction
-      row, and every category breakdown row
-- [ ] Seed or add an expense whose amount is ≥ 100,000 and confirm it renders
-      with lakh–crore grouping, e.g. `100000.0` → `৳1,00,000.00`
-- [ ] Confirm an amount under 100,000 (e.g. `2450.0`) still renders exactly as
-      `2,450.00` — unchanged from before this change
-- [ ] `GET /expenses/export` still returns raw, unformatted amounts and dates
-      (re-run `tests/test_10_export_expenses_csv.py` — must still pass
-      unmodified)
-- [ ] `member_since` on `/profile` still renders an English month name,
-      unchanged
-- [ ] `tests/test_06_date_filter_profile.py`'s four `"₹" in body` assertions
-      are updated to `"৳"` and the file passes
+- [ ] Every cited currency touchpoint renders `৳` instead of `₹`: both amount
+      labels (add/edit expense), both landing-page mock stats and the
+      feature icon, and all three profile displays (stat, transaction row,
+      category row)
+- [ ] `database/queries.py` has zero diff — confirm with `git diff` before
+      shipping
+- [ ] Amount formatting output is byte-for-byte identical to before this
+      change for the same input (e.g. `2450.0` still renders `"2,450.00"`)
+- [ ] `tests/test_06_date_filter_profile.py`'s 4 assertions and 4 comments
+      are updated to `৳` and the file passes
+- [ ] `/login` and `/register` show `faizul@example.com` / `"Faizul Rahman"`
+      placeholders instead of the Nitish-based ones
+- [ ] A fresh seed (`seed_db()` on an empty DB) produces the same 8 rows with
+      the same `amount`/`category`/`date` values, but Bangladeshi-context
+      `description` text for the three cited rows
+- [ ] `demo@spendly.com` / `demo123` still logs in successfully — unchanged
+- [ ] `.claude/commands/seed-user.md` and `.claude/commands/seed-expense.md`
+      no longer mention Indian names/descriptions or `₹`
+- [ ] `.claude/skills/spendly-ui-designer/SKILL.md` documents `৳`, not `₹`
+- [ ] `git diff` confirms `.claude/specs/05-09*.md` are untouched
+- [ ] `CLAUDE.md` has a new currency note superseding the historical specs
 - [ ] Full suite passes: `pytest`
-- [ ] `python .claude/verify_setup.py` still passes (sanity check — no route
-      or schema change is expected in this step)
+- [ ] `python .claude/verify_setup.py` still passes
