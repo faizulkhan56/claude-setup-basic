@@ -98,10 +98,10 @@ wrong for this product.
 this serif is what gives Spendly its character, so do not replace it with a sans
 heading. `--font-body` (DM Sans) for everything else. Both are already loaded in
 `base.html` via Google Fonts; do not add another font link. Amounts should use
-`font-variant-numeric: tabular-nums` so columns of rupee figures align.
+`font-variant-numeric: tabular-nums` so columns of taka figures align.
 
-**Currency is the rupee (`₹`).** Amounts are pre-formatted as strings by
-`database/queries.py` (`"{:,.2f}"`), so templates render `₹{{ tx.amount }}` — do not
+**Currency is the taka (`৳`).** Amounts are pre-formatted as strings by
+`database/queries.py` (`"{:,.2f}"`), so templates render `৳{{ tx.amount }}` — do not
 apply number formatting in Jinja or JS.
 
 **Radius:** use `--radius-sm` for inputs and badges, `--radius-md` for cards,
@@ -231,7 +231,7 @@ That's the shape - concrete, consistent with the stack, visually restrained, and
 - [ ] Headings use `--font-display`; body uses `--font-body`
 - [ ] Template extends `base.html` and uses `{% block head %}` for its stylesheet
 - [ ] Every internal link is `url_for(...)`, never a literal path
-- [ ] Amounts render as `₹{{ value }}` with no Jinja number formatting
+- [ ] Amounts render as `৳{{ value }}` with no Jinja number formatting
 - [ ] No `data-lucide` unless you also added the library and said so
 - [ ] Referenced CSS classes actually exist — grep before claiming reuse
 - [ ] Layout stacks and tables scroll below ~768px

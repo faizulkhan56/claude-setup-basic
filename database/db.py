@@ -92,9 +92,9 @@ def seed_db():
     user_id = cursor.lastrowid
 
     expenses = [
-        (user_id, 450.00,  "Food",          "2026-04-01", "Groceries from D-Mart"),
-        (user_id, 120.00,  "Transport",     "2026-04-02", "Metro card recharge"),
-        (user_id, 1200.00, "Bills",         "2026-04-03", "Electricity bill"),
+        (user_id, 450.00,  "Food",          "2026-04-01", "Groceries from Meena Bazar"),
+        (user_id, 120.00,  "Transport",     "2026-04-02", "CNG fare to office"),
+        (user_id, 1200.00, "Bills",         "2026-04-03", "DESCO electricity bill"),
         (user_id, 350.00,  "Health",        "2026-04-05", "Pharmacy — vitamins"),
         (user_id, 500.00,  "Entertainment", "2026-04-06", "Movie tickets"),
         (user_id, 800.00,  "Shopping",      "2026-04-07", "New earphones"),

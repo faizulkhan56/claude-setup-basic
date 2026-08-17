@@ -13,8 +13,8 @@
 #  7. Custom valid range: only expenses within date_from..date_to appear
 #  8. Invalid order (date_from > date_to): flash error + unfiltered fallback
 #  9. Malformed date string: no crash, unfiltered fallback (HTTP 200)
-# 10. Empty period: "No expenses found for this period." in body, ₹0.00 / 0 / "—"
-# 11. ₹ symbol always present in rendered amounts regardless of active filter
+# 10. Empty period: "No expenses found for this period." in body, ৳0.00 / 0 / "—"
+# 11. ৳ symbol always present in rendered amounts regardless of active filter
 # 12. Query helper signatures: get_summary_stats, get_recent_transactions,
 #     get_category_breakdown accept date_from/date_to kwargs and filter correctly
 
@@ -626,40 +626,40 @@ class TestEmptyPeriod:
 
 
 # ---------------------------------------------------------------------------
-# 11. ₹ symbol always present
+# 11. ৳ symbol always present
 # ---------------------------------------------------------------------------
 
-class TestRupeeSymbol:
-    def test_rupee_symbol_present_with_no_filter(self, client):
+class TestTakaSymbol:
+    def test_taka_symbol_present_with_no_filter(self, client):
         c, _ = client
         _login(c)
         body = c.get("/profile").data.decode()
-        assert "₹" in body
+        assert "৳" in body
 
-    def test_rupee_symbol_present_with_this_month_filter(self, client):
+    def test_taka_symbol_present_with_this_month_filter(self, client):
         c, _ = client
         _login(c)
         body = c.get(
             f"/profile?date_from={THIS_MONTH_FROM}&date_to={THIS_MONTH_TO}"
         ).data.decode()
-        assert "₹" in body
+        assert "৳" in body
 
-    def test_rupee_symbol_present_with_custom_filter(self, client):
+    def test_taka_symbol_present_with_custom_filter(self, client):
         c, _ = client
         _login(c)
         body = c.get(
             f"/profile?date_from={EXPENSE_DATE_OLD}&date_to={EXPENSE_DATE_OLD}"
         ).data.decode()
-        assert "₹" in body
+        assert "৳" in body
 
-    def test_rupee_symbol_present_on_empty_period(self, client):
-        """Even when no expenses are in range, stats still render ₹0.00."""
+    def test_taka_symbol_present_on_empty_period(self, client):
+        """Even when no expenses are in range, stats still render ৳0.00."""
         c, _ = client
         _login(c)
         body = c.get(
             "/profile?date_from=2000-01-01&date_to=2000-01-31"
         ).data.decode()
-        assert "₹" in body
+        assert "৳" in body
 
     def test_amounts_never_display_dollar_sign(self, client):
         c, _ = client
