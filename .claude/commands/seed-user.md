@@ -13,11 +13,11 @@ UNIQUE), which is the cleanest way to implement the retry-until-unique step belo
 
 Then write and run a Python script using Bash that:
 
-1. Generates a realistic random Indian user using your 
-   own knowledge of common Indian names across regions:
-   - Name: a realistic Indian first + last name
+1. Generates a realistic random Bangladeshi user using your 
+   own knowledge of common Bangladeshi names across regions:
+   - Name: a realistic Bangladeshi first + last name
    - Email: derived from the name with a random 2-3 digit 
-     number suffix (e.g. rahul.sharma91@gmail.com)
+     number suffix (e.g. arif.hossain91@gmail.com)
    - Password: "password123" hashed with werkzeug's 
      generate_password_hash
    - created_at: current datetime

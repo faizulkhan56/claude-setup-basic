@@ -80,6 +80,13 @@ execution) and must never face the internet. `gunicorn==23.0.0` therefore lives 
 
 Any other new package still needs an explicit ask.
 
+- **The app's currency symbol is `৳` (Bangladeshi taka), not `₹`.** Templates render
+  `৳{{ tx.amount }}` directly; `database/queries.py`'s `"{:,.2f}"` Western digit
+  grouping is unchanged and deliberately kept as-is — there is no lakh/crore
+  grouping and none should be added. This note supersedes the currency
+  description in `.claude/specs/05-09*.md`, which still describe the old `₹`
+  symbol as historical record; those spec files are intentionally left unedited.
+
 ---
 
 ## Subagent Policy

@@ -38,8 +38,8 @@ in the users table. If not, stop and say:
 Write and run a Python script that:
 
 1. Spreads expenses randomly across the past <months> months
-2. Uses these categories with realistic Indian descriptions 
-   and amounts (₹):
+2. Uses these categories with realistic Bangladeshi descriptions 
+   and amounts (৳):
    - Food: 50–800
    - Transport: 20–500
    - Bills: 200–3000
