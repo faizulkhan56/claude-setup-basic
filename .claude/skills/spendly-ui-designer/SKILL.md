@@ -58,8 +58,8 @@ If you can't see the existing files and the request is non-trivial, ask the user
 ## The Spendly design language
 
 Spendly already has a design language, and it is **not** the generic indigo-on-white
-fintech look. It is warm, editorial, print-leaning: cream paper, forest green, a
-serif display face. Match it. Anything that arrives looking like default Tailwind is
+fintech look. It is warm, editorial, print-leaning: cream paper, bottle green and flag
+red, a serif display face. Match it. Anything that arrives looking like default Tailwind is
 wrong for this product.
 
 **Use the tokens — never hardcode a hex value.** These are defined on `:root` in
@@ -75,9 +75,9 @@ wrong for this product.
 --paper-warm: #f0ede6;   /* subtle raised/alternate fill */
 --paper-card: #ffffff;   /* card surfaces */
 
-/* Accent — forest green primary, ochre secondary */
---accent: #1a472a;       --accent-light: #e8f0eb;
---accent-2: #c17f24;     --accent-2-light: #fdf3e3;
+/* Accent — bottle green primary, flag red secondary */
+--accent: #006A4E;       --accent-light: #E3F3EC;
+--accent-2: #F42A41;     --accent-2-light: #FDE6E8;
 
 /* Semantic */
 --danger: #c0392b;       --danger-light: #fdecea;
