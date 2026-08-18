@@ -1,0 +1,38 @@
+# Phase 2 — VM compose file. Copy (or symlink) to /srv/spendly/compose.yaml,
+# the git clone used as the Docker build context.
+#
+# Differs from the repo-root ../../compose.yaml (phase 1, local dev) in the
+# ways phase-2-cloud-vm.md calls out:
+#   - `build: .` not a registry `image:` reference — the user explicitly
+#     chose to build directly on the VM from a git clone rather than push to
+#     ECR (one host doesn't justify a registry, and it sidesteps any
+#     cross-arch `exec format error` from building elsewhere). SPENDLY_IMAGE
+#     still pins a tag so a restart never silently rebuilds a different
+#     commit; the deploy flow (see ../../CLAUDE.md-referenced runbook in the
+#     handover) is `git pull && docker build -t spendly:<sha> .` before
+#     `systemctl restart spendly`.
+#   - loopback-only port binding — nginx is the only thing allowed to reach
+#     :5001; binding 0.0.0.0 here would let anyone hit the app directly and
+#     skip TLS entirely.
+#   - a host bind mount instead of a named volume, so the daily backup cron
+#     (../../.claude/skills/spendly-devops/references/phase-2-cloud-vm.md)
+#     can `sqlite3 ... VACUUM INTO` the file straight off disk.
+#   - bounded json-file logging, or the root disk fills silently.
+services:
+  web:
+    build: .
+    image: spendly:${SPENDLY_IMAGE:?set SPENDLY_IMAGE to the git-sha tag just built, e.g. spendly:a1b2c3d}
+    ports:
+      - "127.0.0.1:5001:5001"
+    environment:
+      SPENDLY_SECRET_KEY: ${SPENDLY_SECRET_KEY:?fetched from SSM Parameter Store into /etc/spendly/spendly.env, never committed}
+      SPENDLY_DB_PATH: /data/spendly.db
+      SPENDLY_ENV: production
+      SPENDLY_SEED: "0"
+      SPENDLY_BEHIND_PROXY: "1"
+    volumes:
+      - /var/lib/spendly:/data
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }

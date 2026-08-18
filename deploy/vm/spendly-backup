@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Phase 2 — install at /etc/cron.daily/spendly-backup, chmod 755, owned by root.
+#
+# `VACUUM INTO`, never `cp`: the DB runs in WAL mode (database/db.py sets
+# journal_mode = WAL on every connection), so a plain `cp spendly.db` copies
+# only the main file and misses whatever is still sitting in
+# spendly.db-wal — a backup that restores cleanly but is silently missing
+# the most recent transactions. VACUUM INTO produces one consistent,
+# already-compacted snapshot of the live database.
+set -euo pipefail
+STAMP=$(date -u +%FT%H%M%SZ)
+TMP=/tmp/spendly-$STAMP.db
+trap 'rm -f "$TMP"' EXIT
+
+sqlite3 /var/lib/spendly/spendly.db "VACUUM INTO '$TMP'"
+
+# Runs under the instance's IAM role (SSM instance profile scoped with an
+# additional inline policy for s3:PutObject on this one bucket) — no long
+# lived access keys on the box. See the handover for the exact bucket name
+# and the policy that grants this.
+aws s3 cp "$TMP" "s3://<spendly-backups-bucket>/db/spendly-$STAMP.db" \
+  --region ap-southeast-1 --storage-class STANDARD_IA

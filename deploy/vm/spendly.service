@@ -1,0 +1,28 @@
+# Phase 2 — install at /etc/systemd/system/spendly.service.
+# Makes `docker compose` survive a host reboot; `restart: unless-stopped` in
+# compose.yaml already handles a crashed container.
+#
+# No `ExecStartPre=docker compose pull` here, unlike the skill's default
+# registry-backed unit: this deployment builds the image locally on the VM
+# from a git clone (no ECR — see deploy/vm/compose.yaml), so there is
+# nothing to pull. `deploy/vm/deploy.sh` does `git pull` + `docker build`
+# and writes the resulting tag into /etc/spendly/spendly.env *before*
+# `systemctl restart spendly` runs — this unit only ever starts an image
+# that is already present locally.
+[Unit]
+Description=Spendly (docker compose)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/srv/spendly
+EnvironmentFile=/etc/spendly/spendly.env
+ExecStart=/usr/bin/docker compose -f /srv/spendly/compose.yaml up -d --remove-orphans
+ExecStop=/usr/bin/docker compose -f /srv/spendly/compose.yaml down
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target
