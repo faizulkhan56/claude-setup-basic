@@ -34,7 +34,8 @@ spendly/
 ├── compose.yaml        # phase 1 — local single-host run with a named volume
 ├── deploy/
 │   └── vm/             # phase 2 — AWS EC2 / Azure VM: nginx.conf, spendly.service,
-│                       #   bootstrap.sh, deploy.sh, compose.yaml, spendly-backup
+│                       #   bootstrap.sh, deploy.sh, compose.yaml, spendly-backup,
+│                       #   RUNBOOK.md (step-by-step log of the actual AWS EC2 run)
 ├── docs/images/        # screenshots for documentation
 └── .claude/            # Claude Code setup — see "Claude Code setup" below
 ```
