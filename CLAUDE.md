@@ -32,6 +32,9 @@ spendly/
 ├── Dockerfile          # phase 1 — gunicorn on :5001, non-root, DB on a volume
 ├── .dockerignore       # phase 1 — excludes *.db/*.db-wal/*.db-shm, .git, venv
 ├── compose.yaml        # phase 1 — local single-host run with a named volume
+├── deploy/
+│   └── vm/             # phase 2 — AWS EC2 / Azure VM: nginx.conf, spendly.service,
+│                       #   bootstrap.sh, deploy.sh, compose.yaml, spendly-backup
 ├── docs/images/        # screenshots for documentation
 └── .claude/            # Claude Code setup — see "Claude Code setup" below
 ```
@@ -341,7 +344,7 @@ no counts.
 ## Testing
 
 ```bash
-pytest                              # full suite — currently 215 passed, 0 failed
+pytest                              # full suite — currently 252 passed, 0 failed
 pytest tests/test_06_date_filter_profile.py
 pytest -k "test_name"
 pytest -s                           # visible output

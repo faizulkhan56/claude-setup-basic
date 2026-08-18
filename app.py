@@ -16,6 +16,7 @@ from flask import (
     session,
     url_for,
 )
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import check_password_hash
 
 from database.db import (
@@ -43,6 +44,26 @@ app.secret_key = os.environ.get("SPENDLY_SECRET_KEY", "dev-secret-key")
 
 if os.environ.get("SPENDLY_ENV") == "production" and app.secret_key == "dev-secret-key":
     raise RuntimeError("SPENDLY_SECRET_KEY must be set when SPENDLY_ENV=production")
+
+# Phase 2 — behind nginx, Flask otherwise sees every request as plain HTTP
+# from 127.0.0.1, which breaks url_for(_external=True) and would make the
+# SESSION_COOKIE_SECURE check below think it's never on HTTPS. x_for=1 /
+# x_proto=1 / x_host=1 means "trust exactly one proxy hop" — only turn this
+# on when a proxy really is in front of the app, or a direct client could
+# spoof its own X-Forwarded-For.
+if os.environ.get("SPENDLY_BEHIND_PROXY") == "1":
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
+# Phase 2 — hardened session cookie. SECURE is tied to SPENDLY_ENV so local
+# `python app.py` over plain HTTP still works. Spendly has no CSRF protection
+# ( /expenses/<id>/delete accepts a bare POST); SameSite=Lax blocks the
+# cross-site form-POST case for that route, but it is a mitigation, not a
+# fix — real CSRF tokens are a separate, unbuilt feature.
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.environ.get("SPENDLY_ENV") == "production",
+)
 
 CATEGORIES = [
     "Food",
