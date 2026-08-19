@@ -1,6 +1,6 @@
 ---
-description: Analyze the local Spendly Prometheus/Grafana observability stack. Optional argument describes a symptom to investigate.
-argument-hint: "optional symptom, e.g. readiness is slow"
+description: Analyze the local Spendly Prometheus/Grafana/Loki observability stack and correlate metrics with logs. Optional argument describes a symptom to investigate.
+argument-hint: "optional symptom, e.g. p95 latency increased"
 allowed-tools: Read, Agent
 ---
 
@@ -25,19 +25,21 @@ Pass it:
 
 - the user's symptom from `$ARGUMENTS`, if any
 - instruction to load the `spendly-observability` skill first
-- instruction to inspect container state, Prometheus metrics, and only relevant bounded logs
+- instruction to inspect black-box signals, application RED/process metrics, firing Prometheus rules, and relevant Loki logs over matching time windows
+- instruction to inspect container state/bounded Compose logs only when needed to verify a hypothesis
 - instruction to remain read-only and never restart or mutate anything
 
-If no symptom was supplied, ask the analyst for a general health/readiness/latency assessment.
+If no symptom was supplied, ask for a general health/readiness/request-rate/error/p95/process/log-pipeline assessment.
 
 ## Step 3 — Report
 
 Relay the analyst's findings in plain language with:
 
 - current state
-- evidence
+- metric and log evidence
 - assessment
-- likely cause, only if supported
+- correlation between signals
+- likely cause only if supported
 - next safe verification step
 - recommended remediation, not executed
 

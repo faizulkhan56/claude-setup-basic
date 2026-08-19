@@ -3,6 +3,7 @@ import csv
 import io
 import os
 import sqlite3
+import time
 from datetime import date, datetime
 
 from flask import (
@@ -10,6 +11,7 @@ from flask import (
     Response,
     abort,
     flash,
+    g,
     redirect,
     render_template,
     request,
@@ -64,6 +66,79 @@ app.config.update(
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=os.environ.get("SPENDLY_ENV") == "production",
 )
+
+# AI-assisted observability phase 2 — application RED metrics are opt-in so the
+# original local teaching workflow still runs with requirements.txt alone.
+# Deployed observability sets SPENDLY_METRICS_ENABLED=1 and requirements-prod.txt
+# provides prometheus-client. The official Prometheus WSGI app is mounted outside
+# Flask's route table at /metrics, preserving the project's "routes live in app.py"
+# rule and avoiding a business route whose only purpose is exporter plumbing.
+METRICS_ENABLED = os.environ.get("SPENDLY_METRICS_ENABLED") == "1"
+_METRIC_EXCLUDED_PATHS = {"/metrics", "/healthz", "/readyz"}
+
+if METRICS_ENABLED:
+    from prometheus_client import Counter, Gauge, Histogram, make_wsgi_app
+    from werkzeug.middleware.dispatcher import DispatcherMiddleware
+
+    HTTP_REQUESTS = Counter(
+        "spendly_http_requests_total",
+        "Spendly HTTP requests excluding health/readiness/metrics probes.",
+        ["method", "route", "status"],
+    )
+    HTTP_REQUEST_DURATION = Histogram(
+        "spendly_http_request_duration_seconds",
+        "Spendly HTTP request duration excluding health/readiness/metrics probes.",
+        ["method", "route"],
+        buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0),
+    )
+    HTTP_REQUESTS_IN_PROGRESS = Gauge(
+        "spendly_http_requests_in_progress",
+        "Spendly in-progress HTTP requests excluding probes.",
+        ["method"],
+    )
+
+    app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {"/metrics": make_wsgi_app()})
+
+
+@app.before_request
+def _metrics_before_request():
+    if not METRICS_ENABLED or request.path in _METRIC_EXCLUDED_PATHS:
+        return None
+
+    g._metrics_started_at = time.perf_counter()
+    g._metrics_in_progress = True
+    HTTP_REQUESTS_IN_PROGRESS.labels(method=request.method).inc()
+    return None
+
+
+@app.after_request
+def _metrics_after_request(response):
+    if not METRICS_ENABLED or not getattr(g, "_metrics_in_progress", False):
+        return response
+
+    route = request.url_rule.rule if request.url_rule else "unmatched"
+    duration = time.perf_counter() - g._metrics_started_at
+
+    HTTP_REQUESTS.labels(
+        method=request.method,
+        route=route,
+        status=str(response.status_code),
+    ).inc()
+    HTTP_REQUEST_DURATION.labels(method=request.method, route=route).observe(duration)
+    HTTP_REQUESTS_IN_PROGRESS.labels(method=request.method).dec()
+    g._metrics_in_progress = False
+    return response
+
+
+@app.teardown_request
+def _metrics_teardown_request(_exception):
+    # after_request normally decrements the gauge. This fallback covers an
+    # exceptional path where Flask cannot build a response and after_request is
+    # skipped, preventing a permanently inflated in-progress value.
+    if METRICS_ENABLED and getattr(g, "_metrics_in_progress", False):
+        HTTP_REQUESTS_IN_PROGRESS.labels(method=request.method).dec()
+        g._metrics_in_progress = False
+
 
 CATEGORIES = [
     "Food",

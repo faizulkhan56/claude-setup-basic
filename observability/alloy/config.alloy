@@ -1,0 +1,42 @@
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+discovery.docker "spendly" {
+  host = "unix:///var/run/docker.sock"
+
+  filter {
+    name   = "label"
+    values = ["com.docker.compose.project=spendly-observability"]
+  }
+}
+
+discovery.relabel "spendly_logs" {
+  targets = []
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service_name"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+}
+
+loki.source.docker "spendly" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.docker.spendly.targets
+  labels        = {"stack" = "spendly-observability", "platform" = "docker"}
+  relabel_rules = discovery.relabel.spendly_logs.rules
+  forward_to    = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
