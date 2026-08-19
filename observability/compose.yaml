@@ -13,6 +13,7 @@ services:
       SPENDLY_DB_PATH: /data/spendly.db
       SPENDLY_SEED: "0"
       SPENDLY_ENV: production
+      SPENDLY_METRICS_ENABLED: "1"
     volumes:
       - spendly-data:/data
     restart: unless-stopped
@@ -35,10 +36,40 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/rules:/etc/prometheus/rules:ro
       - prometheus-data:/prometheus
     depends_on:
       - spendly
       - blackbox-exporter
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:3.7.4
+    command:
+      - -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    restart: unless-stopped
+
+  alloy:
+    image: grafana/alloy:v1.18.0
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - --disable-reporting
+      - /etc/alloy/config.alloy
+    ports:
+      - "12345:12345"
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy-data:/var/lib/alloy/data
+    depends_on:
+      - loki
     restart: unless-stopped
 
   grafana:
@@ -55,9 +86,12 @@ services:
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
       - prometheus
+      - loki
     restart: unless-stopped
 
 volumes:
   spendly-data:
   prometheus-data:
   grafana-data:
+  loki-data:
+  alloy-data:
