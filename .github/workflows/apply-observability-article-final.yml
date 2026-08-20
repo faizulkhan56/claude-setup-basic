@@ -1,0 +1,51 @@
+name: Apply observability article final update
+
+on:
+  push:
+    paths:
+      - '.tmp-observability-article-trigger'
+
+permissions:
+  contents: write
+
+jobs:
+  apply-update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reconstruct and apply prepared article patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show 4b0d3b75200982cfda024af9f3b1ad0fc2cb9316:.tmp-blog-update/article.patch.gz.b64.part01 > /tmp/part01
+          git show ef1d01fca246bfe39f8cc825a4948dcdbc153afc:.tmp-blog-update/article.patch.gz.b64.part02 > /tmp/part02
+          git show 588903e87e2548211d546dba0e60f68d7dd7f491:.tmp-blog-update/article.patch.gz.b64.part03 > /tmp/part03
+          cat /tmp/part01 /tmp/part02 /tmp/part03 | tr -d '\n' | base64 -d | gzip -d > /tmp/article.patch
+          git apply --check /tmp/article.patch
+          git apply /tmp/article.patch
+
+      - name: Verify observability chapter and evidence references
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -qi 'AI-Assisted Observability' claude-code-properly-wired-expanded.md
+          grep -qi 'Grafana' claude-code-properly-wired-expanded.md
+          grep -qi 'Prometheus' claude-code-properly-wired-expanded.md
+          grep -qi 'Alloy' claude-code-properly-wired-expanded.md
+          grep -qi 'docs/images/observability' claude-code-properly-wired-expanded.md
+
+      - name: Remove one-time updater and commit final article
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .tmp-observability-article-trigger
+          rm -f .github/workflows/apply-observability-article-final.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- claude-code-properly-wired-expanded.md .tmp-observability-article-trigger .github/workflows/apply-observability-article-final.yml
+          git commit -m "docs: add AI-assisted observability chapter"
+          git push origin HEAD:main
