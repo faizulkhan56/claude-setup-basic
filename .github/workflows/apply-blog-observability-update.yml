@@ -21,7 +21,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          base64 -d .tmp-blog-update/article.patch.gz.b64 | gzip -d > /tmp/article.patch
+          cat .tmp-blog-update/article.patch.gz.b64.part* | base64 -d | gzip -d > /tmp/article.patch
           git apply --check /tmp/article.patch
           git apply /tmp/article.patch
 
